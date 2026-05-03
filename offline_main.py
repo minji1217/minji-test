@@ -262,7 +262,7 @@ def process_paper_batch(paper_batch, query_builder, embedder, retriever, bib_sco
             continue
 
         # [Step 2] Stage 1: 오프라인 필터링 (논문당 딱 1번 실행)
-        # Title Boosting 적용: title [SEP] abstract [SEP] title (query_builder에서 처리 권장)
+        # Title Boosting 적용: title [SEP] abstract (query_builder에서 처리)
         p_vec = embedder.encode([paper_query]) 
         p_res = retriever.search(p_vec, [paper_id], top_k=config.PAPER_QUERY_TOP_K)[0]
         
@@ -349,7 +349,7 @@ def run_pipeline(data_path, paper_batch_size):
         embedding_db = pickle.load(f)
 
     total_papers = len(eval_data)
-    global_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150": 0.0, "Recall@600": 0.0, "MRR": 0.0}
+    global_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150": 0.0, "MRR": 0.0}
     total_queries_so_far = 0
 
     for i in tqdm(range(0, total_papers, paper_batch_size), desc="배치 처리 중"):
@@ -367,7 +367,7 @@ def run_pipeline(data_path, paper_batch_size):
                     global_metrics[key] += metrics[key]
             
             total_queries_so_far += batch_queries_count
-            print(f"현재 Recall@150: {global_metrics['Recall@150'] / total_queries_so_far:.4f} | Recall@600: {global_metrics['Recall@600'] / total_queries_so_far:.4f}")
+            print(f"현재 Recall@150: {global_metrics['Recall@150'] / total_queries_so_far:.4f}")
 
     print("\n" + "="*45)
     for key, val in global_metrics.items():
