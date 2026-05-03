@@ -36,7 +36,7 @@ ADAPTER_NAME = "allenai/specter2_proximity"
 CITE_TAG_PATTERN = r"\[CITE:(.*?)\]"
 
 # 3. Retrieval & Fusion 하이퍼파라미터 설정
-NUM_SENTENCES = 3           # Context Query 생성시 placeholder 기준 자를 문장 수 
+NUM_SENTENCES = 4           # Context Query 생성시 placeholder 기준 자를 문장 수 
 SIMILARITY_THRESHOLD = 0.2  # FAISS 코사인 유사도 최소 임계값
 PAPER_QUERY_TOP_K = 1200    # paper query 기준 추려올 후보 논문 개수 
 TOP_K_FINAL = 150           # 후보 논문들 중 context query 통해 가져올 후보 개수 
@@ -44,6 +44,6 @@ TOP_K_FINAL = 150           # 후보 논문들 중 context query 통해 가져�
 PAPER_BATCH_SIZE = 128      # 논문 배치 크기 (for main)
 QUERY_BATCH_SIZE = 128      # 쿼리 배치 크기 (for encode) 
 MAX_SEQ_LENGTH = 256        # SPECTER2 최대 입력 크기 
-PAPER_SIM_WEIGHT = 0.3      # 가중합 비율 (paper_query) 
-CONTEXT_SIM_WEIGHT = 0.7    # 가중합 비율 (context_query)
+PAPER_SIM_WEIGHT = 0.2      # 가중합 비율 (paper_query) 
+CONTEXT_SIM_WEIGHT = 0.8    # 가중합 비율 (context_query)
 
