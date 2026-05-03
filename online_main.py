@@ -52,7 +52,7 @@ class OnlinePaperProcess:
         # fused = rank_fusion(p_res, c_res)[0]
         
         # 가중합 필수 버전
-        fused = cascade_fusion(p_res, [c_vec], [p_vec], self.embedding_db)[0]
+        fused = cascade_fusion(p_res, [c_vec], self.embedding_db)[0]
         print(f" [Debug] fused 개수: {len(fused)}")
 
         # 5. Soft Bias 계산

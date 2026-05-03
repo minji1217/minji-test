@@ -53,11 +53,11 @@ def cascade_fusion(p_search_results, c_vecs, p_vecs, embedding_db):
 import numpy as np
 import config 
 
-def cascade_fusion(p_search_results, c_vecs, p_vecs, embedding_db):
+def cascade_fusion(p_search_results, c_vecs,  embedding_db):
     final_results = []
     matrix_cache = {} 
     
-    for p_res, c_v, p_v in zip(p_search_results, c_vecs, p_vecs):
+    for p_res, c_v in zip(p_search_results, c_vecs):
         c_vec_1d = np.squeeze(c_v)
         
         # 1. paper_query_top_k개의 후보 논문 ID와 FAISS 점수(p_sim)를 리스트로 분리

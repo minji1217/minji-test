@@ -65,7 +65,7 @@ def process_paper_batch(paper_batch, query_builder, embedder, retriever, bib_sco
     p_search_results = retriever.search(p_vectors, query_ids, source = ["paper"] * total_samples, top_k = paper_query_top_k)
     
     # 4. 온라인 정밀 타격 (추려진 paper_query_top_k개 안에서만 내적하여 최종 top-100 선발)
-    all_fused_results = cascade_fusion(p_search_results, c_vectors, p_vectors, embedding_db)
+    all_fused_results = cascade_fusion(p_search_results, c_vectors, embedding_db)
 
     final_output_for_next = [] # 다음 단계에 제공
 
