@@ -41,7 +41,7 @@ class SpecterEmbedder:
         self.model.eval()
         print(f"SPECTER2 준비 완료 (사용 장치 : {self.device})")
 
-    def encode(self, texts, batch_size = config.QUERY_BATCH_SIZE, query_type = "paper"):
+    def encode(self, texts, batch_size = config.QUERY_BATCH_SIZE):
         '''
         텍스트 리스트 입력받아 FAISS에서 검색 가능한 벡터 리스트 반환
         texts : 문자열 리스트 (예: [paper_query] or [context_query1, context_query2,...])
@@ -72,13 +72,7 @@ class SpecterEmbedder:
 
             # 6. 연산 최적화: 기울기 계산을 끄고 사전학습된 SPECTER2 가중치 사용하여 임베딩 
             with torch.no_grad():
-                # query type에 따라 어댑터 ON/OFF 분기 
-                if query_type == "paper":
-                    # BASE 모델 사용
-                    with self.model.disable_adapters():
-                        outputs = self.model(**inputs)
-                elif query_type == "context":
-                    outputs = self.model(**inputs, adapter_names = [self.active_adapter_name]) # 딕셔너리 자동으로 언패킹 (input_ids, attention_mask)
+                outputs = self.model(**inputs, adapter_names = [self.active_adapter_name]) # 딕셔너리 자동으로 언패킹 (input_ids, attention_mask)
                 
                 # 7. 문장 임베딩 추출: SPECTER2는 항상 첫 번째 토큰([CLS])을 해당 문장의 대표 벡터로 사용
                 # shape: (batch_size, sequence_length, 768) -> (batch_size, 768)
