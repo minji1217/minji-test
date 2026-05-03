@@ -1,3 +1,4 @@
+'''
 import numpy as np
 import config 
 import time 
@@ -221,3 +222,160 @@ if __name__ == "__main__":
     final_data = run_pipeline(config.EVAL_DATA_PATH, config.PAPER_BATCH_SIZE)
     utils.save_json(final_data, "offline_output.json") 
     print("'offline_output.json' 저장 완료")
+
+'''
+
+import numpy as np
+import config 
+import time 
+from tqdm import tqdm
+import pickle
+import utils
+from query_builder import QueryBuilder
+from embedder import SpecterEmbedder
+from retriever import FaissRetriever
+from soft_bias import SoftBiasScorer
+from evaluate import calculate_metrics
+
+def process_paper_batch(paper_batch, query_builder, embedder, retriever, bib_scorer, embedding_db):
+    final_output_for_next = []
+    
+    # [Step 1] 논문 단위로 순회 (중복 검색 방지)
+    for item in paper_batch:
+        paper_id = item.get('paper_id', '')
+        
+        # QueryBuilder를 통해 1개의 paper_query와 N개의 context_queries 추출
+        paper_query, context_queries = query_builder.build_offline_query(
+            paper_id, item.get('full_text',''), item.get('title', ''), 
+            item.get('abstract',''), item.get('all_references', [])
+        )
+
+        # DB에 정답이 있는 유효한 문맥만 필터링
+        valid_contexts = []
+        for sample in context_queries:
+            vt = [tid for tid in sample['target_ids'] if tid in embedding_db]
+            if vt:
+                sample['target_ids'] = vt
+                valid_contexts.append(sample)
+
+        if not valid_contexts:
+            continue
+
+        # [Step 2] Stage 1: 오프라인 필터링 (논문당 딱 1번 실행)
+        # Title Boosting 적용: title [SEP] abstract [SEP] title (query_builder에서 처리 권장)
+        p_vec = embedder.encode([paper_query]) 
+        p_res = retriever.search(p_vec, [paper_id], top_k=config.PAPER_QUERY_TOP_K)[0]
+        
+        # 후보 5,000개의 벡터를 DB에서 한꺼번에 추출 (배치 처리)
+        p_ids = [res['paper_id'] for res in p_res]
+        # 리스트 컴프리헨션으로 I/O 속도 극대화
+        valid_data = [(i, embedding_db[pid]) for i, pid in enumerate(p_ids) if pid in embedding_db]
+        
+        if not valid_data:
+            continue
+            
+        v_indices, t_vectors = zip(*valid_data)
+        target_matrix = np.array(t_vectors).squeeze() # Shape: (5000, 768)
+        valid_p_sims = np.array([p_res[i]['score'] for i in v_indices])
+        valid_p_ids = [p_ids[i] for i in v_indices]
+
+        # [Step 3] Stage 2: 온라인 정밀 타격 (행렬 연산으로 모든 문맥 한꺼번에 계산)
+        c_queries = [ctx['context_query'] for ctx in valid_contexts]
+        c_vecs = embedder.encode(c_queries) # 문맥들 배치 인코딩
+        
+        # 모든 문맥에 대해 한꺼번에 유사도 계산 (Matrix Multiplication)
+        # c_sims_all shape: (문맥개수, 5000)
+        c_sims_all = np.dot(c_vecs, target_matrix.T)
+
+        # [Step 4] 문맥별로 최종 순위 계산 및 패키징
+        for i, sample in enumerate(valid_contexts):
+            c_sims = c_sims_all[i]
+            
+            # Z-Score 정규화 (안정적인 결합)
+            p_norm = (valid_p_sims - np.mean(valid_p_sims)) / (np.std(valid_p_sims) + 1e-8)
+            c_norm = (c_sims - np.mean(c_sims)) / (np.std(c_sims) + 1e-8)
+
+            # 0.6 돌파를 위한 가중치 적용 (문맥에 압도적 비중)
+            final_sims = (config.PAPER_SIM_WEIGHT * p_norm) + (config.CONTEXT_SIM_WEIGHT * c_norm)
+            
+            # Top-K 정렬
+            top_idx = np.argsort(final_sims)[::-1][:config.TOP_K_FINAL]
+            
+            candidates = []
+            for rank, idx in enumerate(top_idx):
+                candidates.append({
+                    "paper_id": valid_p_ids[idx],
+                    "sim": float(final_sims[idx])
+                })
+
+            # Soft Bias (기존 로직 유지)
+            raw_bibs = sample.get('bib_ids', [])
+            valid_user_bibs = [b for b in raw_bibs if b in embedding_db]
+            biased = bib_scorer.soft_bias(candidates, valid_user_bibs, embedding_db)
+            
+            # 최종 피처 정리
+            norm_sims = np.array([c['sim'] for c in biased])
+            raw_scores = np.array([c.get('bib_score', 0.0) for c in biased])
+            
+            b_min, b_max = np.min(raw_scores), np.max(raw_scores)
+            norm_bibs = (raw_scores - b_min) / (b_max - b_min + 1e-9) if b_max > b_min else np.zeros_like(raw_scores)
+
+            clean_candidates = [{
+                "paper_id": cand['paper_id'],
+                "sim": float(norm_sims[idx]),
+                "bib_score": float(norm_bibs[idx])
+            } for idx, cand in enumerate(biased)]
+
+            final_output_for_next.append({
+                "query_id": sample['query_id'],
+                "target_ids": sample['target_ids'],
+                "context": sample['context_query'],
+                "candidates": clean_candidates
+            })
+
+    return final_output_for_next
+
+def run_pipeline(data_path, paper_batch_size):
+    print(f"[최적화 파이프라인 가동] 데이터: {data_path}")
+    start_time = time.time()
+
+    query_builder = QueryBuilder()
+    embedder = SpecterEmbedder()
+    retriever = FaissRetriever()
+    bib_scorer = SoftBiasScorer()
+
+    eval_data = utils.load_json(data_path)
+    with open(config.EMBEDDING_DB_PATH, "rb") as f:
+        embedding_db = pickle.load(f)
+
+    total_papers = len(eval_data)
+    global_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150": 0.0, "Recall@600": 0.0, "MRR": 0.0}
+    total_queries_so_far = 0
+
+    for i in tqdm(range(0, total_papers, paper_batch_size), desc="배치 처리 중"):
+        paper_batch = eval_data[i : i + paper_batch_size]
+        batch_results = process_paper_batch(paper_batch, query_builder, embedder, retriever, bib_scorer, embedding_db)
+        
+        batch_queries_count = len(batch_results)
+        if batch_queries_count > 0:
+            for q_data in batch_results:
+                predicted_ids = [cand['paper_id'] for cand in q_data['candidates']]
+                gt_ids = q_data['target_ids']
+                metrics = calculate_metrics(predicted_ids, gt_ids)
+
+                for key in global_metrics:
+                    global_metrics[key] += metrics[key]
+            
+            total_queries_so_far += batch_queries_count
+            print(f"현재 Recall@150: {global_metrics['Recall@150'] / total_queries_so_far:.4f} | Recall@600: {global_metrics['Recall@600'] / total_queries_so_far:.4f}")
+
+    print("\n" + "="*45)
+    for key, val in global_metrics.items():
+        print(f" 최종 {key}: {val / total_queries_so_far:.4f}")
+    print("="*45)
+    print(f"총 소요시간: {time.time() - start_time:.2f}초")
+
+    return []
+
+if __name__ == "__main__":
+    run_pipeline(config.EVAL_DATA_PATH, config.PAPER_BATCH_SIZE)
