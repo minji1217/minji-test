@@ -36,7 +36,7 @@ class QueryBuilder:
         # 논문의 전체 레퍼런스 목록을 집합으로 만듦 (-> for 정답 제거)
         all_refs_set = set(all_references if all_references else [])
 
-        paper_query = f"{title} [SEP] {abstract}"
+        paper_query = f"{title} [SEP] {title} [SEP] {abstract}"
 
         # 2. 텍스트 내의 모든 [CITE] 위치 찾음
         # 해당 텍스트가 어디서 시작해서 어디에서 끝나는지에 대한 정보 가진 객체 return 
