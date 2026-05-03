@@ -164,7 +164,7 @@ def run_pipeline(data_path, paper_batch_size):
                 predicted_ids = [cand['paper_id'] for cand in q_data['candidates']]
                 gt_ids = q_data['target_ids']
 
-                print(predicted_ids)
+                print(len(predicted_ids))
                 
                 # 쿼리당 채점 
                 metrics = calculate_metrics(predicted_ids, gt_ids)
