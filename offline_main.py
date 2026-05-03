@@ -65,9 +65,27 @@ def process_paper_batch(paper_batch, query_builder, embedder, retriever, bib_sco
     # context로 전체 후보 풀 다 뒤지지 않고, paper query로 먼저 FAISS 검색해서 후보 풀 추림 (paper_query_top_k개)
     p_search_results = retriever.search(p_vectors, query_ids, source = ["paper"] * total_samples, top_k = paper_query_top_k)
     
+    # ==========================================================
+    # 🔍 [Stage 1 Debugging] 여기서 1차 성적표를 확인하자!
+    # ==========================================================
+    p_captured_count = 0
+    for i in range(total_samples):
+        # 1차 검색으로 가져온 논문 ID들 리스트업
+        retrieved_ids = [res['paper_id'] for res in p_search_results[i]]
+        # 진짜 정답(target_ids) 리스트
+        gt_ids = metadata_list[i]['target_ids']
+        
+        # 정답 중 하나라도 1차 결과(예: 3000개) 안에 들어있는지 확인
+        if any(tid in retrieved_ids for tid in gt_ids):
+            p_captured_count += 1
+            
+    stage1_recall = p_captured_count / total_samples if total_samples > 0 else 0
+    print(f"\n📢 [Stage 1 Debug] Recall@{paper_query_top_k}: {stage1_recall:.4f}")
+    # ==========================================================
+
     # 4. 온라인 정밀 타격 (추려진 paper_query_top_k개 안에서만 내적하여 최종 top-100 선발)
     all_fused_results = cascade_fusion(p_search_results, c_vectors, embedding_db)
-
+    
     final_output_for_next = [] # 다음 단계에 제공
 
     # 5. Soft Bias 적용 및 최종 피처 패키징 
