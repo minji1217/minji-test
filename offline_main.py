@@ -52,8 +52,8 @@ def process_paper_batch(paper_batch, query_builder, embedder, retriever, bib_sco
     # 2. 배치 임베딩
     # 2-1. context query 한 번에 임베딩 
     # 이때, embedder 내부에서 batch_size(예: 64) 단위로 쪼개어 연산 후 붙여줌
-    p_vectors = embedder.encode(paper_query_list, query_type = "paper")
-    c_vectors = embedder.encode(context_query_list, query_type = "context")
+    p_vectors = embedder.encode(paper_query_list)
+    c_vectors = embedder.encode(context_query_list)
     query_ids = [m['query_id'] for m in metadata_list]
 
     # 2-2. 전역 쿼리는 중복 제거한 paper_batch(예: 32) 개수만큼 인코딩
