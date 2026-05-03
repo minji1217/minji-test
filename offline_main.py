@@ -1,6 +1,7 @@
 import numpy as np
 import config 
 import time 
+from tqdm import tqdm
 import pickle
 import utils
 from query_builder import QueryBuilder
@@ -148,7 +149,7 @@ def run_pipeline(data_path, paper_batch_size):
     global_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150": 0.0, "Recall@600": 0.0, "MRR": 0.0}
 
     # 3. 데이터셋 순회하며 파이프라인 실행 (paper_batch_size(예: 32) 단위로 쪼갬)
-    for i in range(0, total_papers, paper_batch_size):
+    for i in tqdm(range(0, total_papers, paper_batch_size), desc="논문 배치 처리중..."):
         paper_batch = eval_data[i : i + paper_batch_size]
         # 논문 100개, batch : 32일때 마지막 루프 i=96일땐 96~128(96+32)가 아닌 96~100이어야하므로 min 취함 
         print(f"처리 중 ... 논문 [{i} ~ {min(i + paper_batch_size, total_papers)}] / {total_papers}")
