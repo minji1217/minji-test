@@ -60,7 +60,7 @@ def cascade_fusion(p_search_results, c_vecs, p_vecs, embedding_db):
     for p_res, c_v, p_v in zip(p_search_results, c_vecs, p_vecs):
         c_vec_1d = np.squeeze(c_v)
         
-        # 1. 3000개의 후보 논문 ID와 FAISS 점수(p_sim)를 리스트로 분리
+        # 1. paper_query_top_k개의 후보 논문 ID와 FAISS 점수(p_sim)를 리스트로 분리
         p_ids = [item['paper_id'] for item in p_res]
         cache_key = tuple(p_ids)
 
@@ -70,7 +70,7 @@ def cascade_fusion(p_search_results, c_vecs, p_vecs, embedding_db):
         else: 
             p_sims = np.array([item['score'] for item in p_res])
         
-            # 2. DB에서 3000개의 벡터를 가져와 거대한 '행렬(Matrix)'로 조립
+            # 2. DB에서 paper_query_top_k개의 벡터를 가져와 행렬로 
             target_vectors = []
             valid_indices = []
         
@@ -92,8 +92,7 @@ def cascade_fusion(p_search_results, c_vecs, p_vecs, embedding_db):
             
             matrix_cache[cache_key] = (target_matrix, valid_p_ids, valid_p_sims)
 
-        # 3. [핵심: 진짜 배치 연산 🔥] 
-        # 3000번 for문을 돌지 않고, 행렬 곱셈 단 1번으로 3000개의 유사도를 동시에 계산!
+        # 3. 3000(paper_query_top_k)번 for문을 돌지 않고, 행렬 곱셈으로 3000개의 유사도를 동시에 계산
         c_sims = np.dot(target_matrix, c_vec_1d) 
         
         # 3-1. paper 점수 0~1 정규화 
@@ -120,7 +119,7 @@ def cascade_fusion(p_search_results, c_vecs, p_vecs, embedding_db):
                 "query_id": q_id,
                 "rank": rank + 1,
                 "paper_id": valid_p_ids[idx],
-                "sim": float(final_sims[idx]) # 직렬화를 위해 float 변환
+                "sim": float(final_sims[idx]) 
             })
             
         final_results.append(placeholder_results)
