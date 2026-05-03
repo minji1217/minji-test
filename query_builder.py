@@ -1,6 +1,6 @@
 import re
 import nltk 
-from transformers import AutoTokenizer
+# from transformers import AutoTokenizer
 import config
 
 class QueryBuilder:
@@ -12,7 +12,7 @@ class QueryBuilder:
         self.cite_tag = cite_tag
 
         # SPECTER2 모델이 읽을 수 있는 형태로 글자 잘라주는 도구 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name) 
+        # self.tokenizer = AutoTokenizer.from_pretrained(model_name) 
 
         # [추가] NLTK 문장 토크나이저 다운로드 (최초 1회만 실행)
         try:
@@ -57,7 +57,7 @@ class QueryBuilder:
             # for -> if -> [strip()]
 
             # 4. [for 효율성] 해당 인용구 직전의 텍스트 슬라이싱 (placeholder 전 1000글자 정도 1차로 가져옴, 약 150~200단어)
-            buffer_zone = max(0, start_pos - 1500)
+            buffer_zone = max(0, start_pos - 1000)
             raw_snippet = full_text[buffer_zone:start_pos]
 
             # 5. NLTK 이용해 문장 단위 분할 (리스트로 분해)
