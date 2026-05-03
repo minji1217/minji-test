@@ -63,11 +63,20 @@ class OnlinePaperProcess:
 
 
         # 6. 피처 정규화 
-        raw_sims = [c['sim'] for c in biased]
+        norm_sims = [c['sim'] for c in biased]
         raw_bibs = [c.get('bib_score', 0.0) for c in biased]
 
-        norm_sims = utils.normalize(raw_sims)
-        norm_bibs = utils.normalize(raw_bibs)
+        # sim 정규화 (Min-Max)
+        # s_min, s_max = np.min(raw_sims), np.max(raw_sims)
+        # norm_sims = (raw_sims - s_min) / (s_max - s_min + 1e-9)
+        # bib_score 정규화 (Min-Max)
+        b_min, b_max = np.min(raw_bibs), np.max(raw_bibs)
+        # 만약 bib_score가 전부 0이라서 max=0, min=0인 경우를 대비한 방어 로직
+        if b_max == b_min:
+            norm_bibs = np.zeros_like(raw_bibs)
+        else:
+            norm_bibs = (raw_bibs - b_min) / (b_max - b_min + 1e-9)
+
 
         # 7. 최종 데이터 형식 가공
         clean_candidates = []

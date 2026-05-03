@@ -94,7 +94,7 @@ def cascade_fusion(p_search_results, c_vecs,  embedding_db):
 
         # 3. 3000(paper_query_top_k)번 for문을 돌지 않고, 행렬 곱셈으로 3000개의 유사도를 동시에 계산
         c_sims = np.dot(target_matrix, c_vec_1d) 
-        '''
+        
         # 3-1. paper 점수 0~1 정규화 
         p_min, p_max = np.min(valid_p_sims), np.max(valid_p_sims)
         p_norm = (valid_p_sims - p_min) / (p_max - p_min + 1e-8) # 작은 수 더해서 0으로 나누는 경우 방지 
@@ -103,10 +103,10 @@ def cascade_fusion(p_search_results, c_vecs,  embedding_db):
         # 3-2. context 점수 0~1 정규화 
         c_min, c_max = np.min(c_sims), np.max(c_sims)
         c_norm = (c_sims - c_min) / (c_max - c_min + 1e-8) # 반환값 shape: (3000,)
-        '''
+        
         # 4. 가중합도 NumPy로 한 번에 처리
-        # final_sims = (config.PAPER_SIM_WEIGHT * p_norm) + (config.CONTEXT_SIM_WEIGHT * c_norm)
-        final_sims = c_sims + (config.PAPER_SIM_WEIGHT * valid_p_sims)
+        final_sims = (config.PAPER_SIM_WEIGHT * p_norm) + (config.CONTEXT_SIM_WEIGHT * c_norm)
+        
 
         # 5. 점수가 높은 순서대로 인덱스를 정렬하고 Top-100개만 자름 (초고속 정렬)
         top_indices = np.argsort(final_sims)[::-1][:config.TOP_K_FINAL]

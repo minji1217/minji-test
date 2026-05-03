@@ -82,11 +82,16 @@ def process_paper_batch(paper_batch, query_builder, embedder, retriever, bib_sco
         # soft bias 점수 계산
         biased = bib_scorer.soft_bias(candidates, valid_user_bibs, embedding_db)
         # sim, bib_score 정규화
-        raw_sims = [c['sim'] for c in biased]
-        raw_bibs = [c.get('bib_score', 0.0) for c in biased]
-
-        norm_sims = raw_sims
-        norm_bibs = utils.normalize(raw_bibs)
+        norm_sims = np.array([c['sim'] for c in biased])
+        raw_bibs = np.array([c.get('bib_score', 0.0) for c in biased])
+    
+        # bib_score 정규화 (Min-Max)
+        b_min, b_max = np.min(raw_bibs), np.max(raw_bibs)
+        # 만약 bib_score가 전부 0이라서 max=0, min=0인 경우를 대비한 방어 로직
+        if b_max == b_min:
+            norm_bibs = np.zeros_like(raw_bibs)
+        else:
+            norm_bibs = (raw_bibs - b_min) / (b_max - b_min + 1e-9)
 
         # top-100 각 논문에 대해 필요한 피처만 추출
         clean_candidates = []
@@ -171,7 +176,7 @@ def run_pipeline(data_path, paper_batch_size):
             total_queries_so_far += batch_queries_count
 
             # 배치 평균 성능 출력
-            print(f"[Batch 성능] Recall@50: {batch_metrics['Recall@50'] / batch_queries_count:.4f} | Recall@100: {batch_metrics['Recall@100'] / batch_queries_count:.4f} | MRR: {batch_metrics['MRR'] / batch_queries_count:.4f}")
+            print(f"[Batch 성능] Recall@50: {batch_metrics['Recall@50'] / batch_queries_count:.4f} | Recall@100: {batch_metrics['Recall@100'] / batch_queries_count:.4f} | Recall@150: {batch_metrics['Recall@150'] / batch_queries_count:.4f} | MRR: {batch_metrics['MRR'] / batch_queries_count:.4f}")
         
         all_processed_queries.extend(batch_results)# 다음 파트에 합치기 (batch_results 이용할지 말지)
     
