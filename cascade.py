@@ -53,6 +53,7 @@ def cascade_fusion(p_search_results, c_vecs, p_vecs, embedding_db):
 import numpy as np
 import config 
 
+'''
 def cascade_fusion(p_search_results, c_vecs,  embedding_db):
     final_results = []
     matrix_cache = {} 
@@ -95,7 +96,7 @@ def cascade_fusion(p_search_results, c_vecs,  embedding_db):
         # 3. 3000(paper_query_top_k)번 for문을 돌지 않고, 행렬 곱셈으로 3000개의 유사도를 동시에 계산
         c_sims = np.dot(target_matrix, c_vec_1d) 
         
-        '''
+        
         # 3-1. paper 점수 0~1 정규화 
         p_min, p_max = np.min(valid_p_sims), np.max(valid_p_sims)
         p_norm = (valid_p_sims - p_min) / (p_max - p_min + 1e-8) # 작은 수 더해서 0으로 나누는 경우 방지 
@@ -104,7 +105,7 @@ def cascade_fusion(p_search_results, c_vecs,  embedding_db):
         # 3-2. context 점수 0~1 정규화 
         c_min, c_max = np.min(c_sims), np.max(c_sims)
         c_norm = (c_sims - c_min) / (c_max - c_min + 1e-8) # 반환값 shape: (3000,)
-        '''
+        
 
         # 3-1. paper 점수 Z-Score 정규화 (평균 0, 표준편차 1로 스케일링)
         p_mean, p_std = np.mean(valid_p_sims), np.std(valid_p_sims)
@@ -132,6 +133,52 @@ def cascade_fusion(p_search_results, c_vecs,  embedding_db):
                 "paper_id": valid_p_ids[idx],
                 "sim": float(final_sims[idx]) 
             })
+            
+        final_results.append(placeholder_results)
+        
+    return final_results
+'''
+
+def cascade_fusion(p_search_results, c_vecs, embedding_db):
+    final_results = []
+    
+    for p_res, c_v in zip(p_search_results, c_vecs):
+        c_vec_1d = np.squeeze(c_v)
+        p_ids = [item['paper_id'] for item in p_res]
+        p_sims = np.array([item['score'] for item in p_res])
+
+        # 1. 배치로 벡터 가져오기 (성능 핵심)
+        # 만약 dict 형태라면 아래 방식이 개별 get보다 훨씬 빠름
+        target_vectors = [np.squeeze(embedding_db[pid]) for pid in p_ids if pid in embedding_db]
+        valid_p_sims = np.array([p_sims[i] for i, pid in enumerate(p_ids) if pid in embedding_db])
+        valid_p_ids = [pid for pid in p_ids if pid in embedding_db]
+
+        if not target_vectors:
+            final_results.append([])
+            continue
+
+        target_matrix = np.array(target_vectors) 
+        
+        # 2. 행렬 연산으로 Context 유사도 계산
+        c_sims = np.dot(target_matrix, c_vec_1d) 
+        
+        # 3. Z-Score 정규화
+        p_norm = (valid_p_sims - np.mean(valid_p_sims)) / (np.std(valid_p_sims) + 1e-8)
+        c_norm = (c_sims - np.mean(c_sims)) / (np.std(c_sims) + 1e-8)
+
+        # 4. 가중합 (비율 조정 테스트 권장)
+        final_sims = (config.PAPER_SIM_WEIGHT * p_norm) + (config.CONTEXT_SIM_WEIGHT * c_norm)
+        
+        # 5. Top-K 추출 및 패키징
+        top_indices = np.argsort(final_sims)[::-1][:config.TOP_K_FINAL]
+        q_id = p_res[0]['query_id'] if p_res else "UNKNOWN"
+        
+        placeholder_results = [{
+            "query_id": q_id,
+            "rank": rank + 1,
+            "paper_id": valid_p_ids[idx],
+            "sim": float(final_sims[idx]) 
+        } for rank, idx in enumerate(top_indices)]
             
         final_results.append(placeholder_results)
         
