@@ -145,7 +145,7 @@ def run_pipeline(data_path, paper_batch_size):
 
     # 전체 데이터 global metrics 누적 변수 초기화 
     total_queries_so_far = 0
-    global_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "MRR": 0.0}
+    global_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150": 0.0, "MRR": 0.0}
 
     # 3. 데이터셋 순회하며 파이프라인 실행 (paper_batch_size(예: 32) 단위로 쪼갬)
     for i in range(0, total_papers, paper_batch_size):
@@ -163,6 +163,8 @@ def run_pipeline(data_path, paper_batch_size):
             for q_data in batch_results:
                 predicted_ids = [cand['paper_id'] for cand in q_data['candidates']]
                 gt_ids = q_data['target_ids']
+
+                print(predicted_ids)
                 
                 # 쿼리당 채점 
                 metrics = calculate_metrics(predicted_ids, gt_ids)
