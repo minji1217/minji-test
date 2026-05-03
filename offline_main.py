@@ -145,7 +145,7 @@ def run_pipeline(data_path, paper_batch_size):
 
     # 전체 데이터 global metrics 누적 변수 초기화 
     total_queries_so_far = 0
-    global_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150": 0.0, "MRR": 0.0}
+    global_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150": 0.0, "Recall@600": 0.0, "MRR": 0.0}
 
     # 3. 데이터셋 순회하며 파이프라인 실행 (paper_batch_size(예: 32) 단위로 쪼갬)
     for i in range(0, total_papers, paper_batch_size):
@@ -158,7 +158,7 @@ def run_pipeline(data_path, paper_batch_size):
         # 배치 단위 성능 평가 로직 
         batch_queries_count = len(batch_results)
         if batch_queries_count > 0:
-            batch_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150":0.0, "MRR": 0.0}
+            batch_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150":0.0, "Recall@600": 0.0, "MRR": 0.0}
 
             for q_data in batch_results:
                 predicted_ids = [cand['paper_id'] for cand in q_data['candidates']]
@@ -177,7 +177,8 @@ def run_pipeline(data_path, paper_batch_size):
             total_queries_so_far += batch_queries_count
 
             # 배치 평균 성능 출력
-            print(f"[Batch 성능] Recall@50: {batch_metrics['Recall@50'] / batch_queries_count:.4f} | Recall@100: {batch_metrics['Recall@100'] / batch_queries_count:.4f} | Recall@150: {batch_metrics['Recall@150'] / batch_queries_count:.4f} | MRR: {batch_metrics['MRR'] / batch_queries_count:.4f}")
+            # print(f"[Batch 성능] Recall@50: {batch_metrics['Recall@50'] / batch_queries_count:.4f} | Recall@100: {batch_metrics['Recall@100'] / batch_queries_count:.4f} | Recall@150: {batch_metrics['Recall@150'] / batch_queries_count:.4f} | MRR: {batch_metrics['MRR'] / batch_queries_count:.4f}")
+            print(f"[Batch 성능] Recall@100: {batch_metrics['Recall@100'] / batch_queries_count:.4f} | Recall@150: {batch_metrics['Recall@150'] / batch_queries_count:.4f} | Recall@600: {batch_metrics['Recall@600'] / batch_queries_count:.4f} | MRR: {batch_metrics['MRR'] / batch_queries_count:.4f}")
         
         all_processed_queries.extend(batch_results)# 다음 파트에 합치기 (batch_results 이용할지 말지)
     
