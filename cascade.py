@@ -106,8 +106,16 @@ def cascade_fusion(p_search_results, c_vecs,  embedding_db):
         c_norm = (c_sims - c_min) / (c_max - c_min + 1e-8) # 반환값 shape: (3000,)
         '''
 
+        # 3-1. paper 점수 Z-Score 정규화 (평균 0, 표준편차 1로 스케일링)
+        p_mean, p_std = np.mean(valid_p_sims), np.std(valid_p_sims)
+        p_norm = (valid_p_sims - p_mean) / (p_std + 1e-8) 
+
+        # 3-2. context 점수 Z-Score 정규화
+        c_mean, c_std = np.mean(c_sims), np.std(c_sims)
+        c_norm = (c_sims - c_mean) / (c_std + 1e-8)
+
         # 4. 가중합도 NumPy로 한 번에 처리
-        final_sims = (config.PAPER_SIM_WEIGHT * valid_p_sims) + (config.CONTEXT_SIM_WEIGHT * c_sims)
+        final_sims = (config.PAPER_SIM_WEIGHT * p_norm) + (config.CONTEXT_SIM_WEIGHT * c_norm)
         
 
         # 5. 점수가 높은 순서대로 인덱스를 정렬하고 Top-100개만 자름 (초고속 정렬)
