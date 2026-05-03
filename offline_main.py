@@ -291,10 +291,15 @@ def process_paper_batch(paper_batch, query_builder, embedder, retriever, bib_sco
         for i, sample in enumerate(valid_contexts):
             c_sims = c_sims_all[i]
             
-            # Z-Score 정규화 (안정적인 결합)
-            p_norm = (valid_p_sims - np.mean(valid_p_sims)) / (np.std(valid_p_sims) + 1e-8)
-            c_norm = (c_sims - np.mean(c_sims)) / (np.std(c_sims) + 1e-8)
+            # 3-1. Paper 점수 Min-Max 정규화
+            p_min, p_max = np.min(valid_p_sims), np.max(valid_p_sims)
+            # 분모가 0이 되는 것을 방지하기 위해 아주 작은 값(1e-8)을 더해줘
+            p_norm = (valid_p_sims - p_min) / (p_max - p_min + 1e-8) 
 
+            # 3-2. Context 점수 Min-Max 정규화
+            c_min, c_max = np.min(c_sims), np.max(c_sims)
+            c_norm = (c_sims - c_min) / (c_max - c_min + 1e-8)
+            
             # 0.6 돌파를 위한 가중치 적용 (문맥에 압도적 비중)
             final_sims = (config.PAPER_SIM_WEIGHT * p_norm) + (config.CONTEXT_SIM_WEIGHT * c_norm)
             
