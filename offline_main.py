@@ -158,7 +158,7 @@ def run_pipeline(data_path, paper_batch_size):
         # 배치 단위 성능 평가 로직 
         batch_queries_count = len(batch_results)
         if batch_queries_count > 0:
-            batch_metrics = {"Recall@10": 0.0, "Recall@50": 0.0, "Recall@100": 0.0, "MRR": 0.0}
+            batch_metrics = {"Recall@50": 0.0, "Recall@100": 0.0, "Recall@150":0.0, "MRR": 0.0}
 
             for q_data in batch_results:
                 predicted_ids = [cand['paper_id'] for cand in q_data['candidates']]
