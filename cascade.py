@@ -101,11 +101,11 @@ def cascade_fusion(p_search_results, c_vecs, p_vecs, embedding_db):
         
 
         # 3-2. context 점수 0~1 정규화 
-        c_min, c_max = np.min(c_vec_1d), np.max(c_vec_1d)
+        c_min, c_max = np.min(c_sims), np.max(c_sims)
         c_norm = (c_sims - c_min) / (c_max - c_min + 1e-8) # 반환값 shape: (3000,)
         
         # 4. 가중합도 NumPy로 한 번에 처리
-        final_sims = (config.PAPER_SIM_WEIGHT * valid_p_sims) + (config.CONTEXT_SIM_WEIGHT * c_sims)
+        final_sims = (config.PAPER_SIM_WEIGHT * p_norm) + (config.CONTEXT_SIM_WEIGHT * c_norm)
         
         # 5. 점수가 높은 순서대로 인덱스를 정렬하고 Top-100개만 자름 (초고속 정렬)
         top_indices = np.argsort(final_sims)[::-1][:config.TOP_K_FINAL]
