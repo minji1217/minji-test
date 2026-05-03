@@ -72,8 +72,8 @@ class QueryBuilder:
             #         selected_sentences[0] = selected_sentences[0][selected_sentences[0].find(" ")+1:]
 
             # 7. 추출된 문장들을 [SEP] 단위로 결합하여 최종 context 구성 
-            pure_context = " [SEP] ".join(selected_sentences)
-            context_query = f"{pure_context} [SEP] {title} [SEP] {abstract}"
+            context_query = " [SEP] ".join(selected_sentences)
+            # context_query = f"{pure_context} [SEP] {title} [SEP] {abstract}"
             
             ''''
             # 5. [for 정밀화] 토큰 단위로 변환 후 뒤에서부터 추출 
@@ -151,8 +151,8 @@ class QueryBuilder:
         selected_sentences = sentences[-num_sentences:]
 
         # 문장들을 [SEP] 단위로 결합 
-        pure_context = " [SEP] ".join(selected_sentences)
-        context_query = f"{pure_context} [SEP] {title} [SEP] {abstract}"
+        context_query = " [SEP] ".join(selected_sentences)
+        # context_query = f"{pure_context} [SEP] {title} [SEP] {abstract}"
 
         # 4. 최종 쿼리 생성 (paper_query, context_query 생성)
         paper_query = f"{title} [SEP] {abstract}".strip()
